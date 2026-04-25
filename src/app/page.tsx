@@ -2,24 +2,87 @@
 
 import { useState } from 'react';
 import SearchForm from '@/components/SearchForm';
+import TodoList from '@/components/TodoList';
+import HistoryPanel from '@/components/HistoryPanel';
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [markdownText, setMarkdownText] = useState('');
+  const [currentUrl, setCurrentUrl] = useState('');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleAnalyze = async (url: string) => {
     setIsLoading(true);
     setStatusMessage(`Fetching PageSpeed for ${url}...`);
-    
-    // The actual fetch and streaming logic will be implemented in Task 5
-    // For now, we just simulate the state transition
-    setTimeout(() => {
+    setMarkdownText('');
+    setCurrentUrl(url);
+
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to analyze URL');
+      }
+
+      if (!res.body) {
+        throw new Error('No response body');
+      }
+
       setStatusMessage('AI Analyzing...');
-      setTimeout(() => {
-        setIsLoading(false);
-        setStatusMessage('');
-      }, 2000);
-    }, 2000);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.replace('data: ', '').trim();
+              if (!dataStr) continue;
+
+              try {
+                const parsed = JSON.parse(dataStr);
+                
+                if (parsed.type === 'metrics') {
+                  setStatusMessage('Generating Todo List...');
+                } else if (parsed.type === 'text') {
+                  setMarkdownText((prev) => prev + parsed.data);
+                } else if (parsed.type === 'done') {
+                  // Stream finished
+                  setRefreshTrigger((prev) => prev + 1);
+                } else if (parsed.type === 'error') {
+                  console.error('Stream error:', parsed.data);
+                  setStatusMessage(`Error: ${parsed.data}`);
+                }
+              } catch (e) {
+                console.error('Error parsing stream data', e, dataStr);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      setStatusMessage(error instanceof Error ? `Error: ${error.message}` : 'An unknown error occurred');
+    } finally {
+      setIsLoading(false);
+      setStatusMessage((prev) => (prev.startsWith('Error') ? prev : ''));
+    }
   };
 
   return (
@@ -40,6 +103,10 @@ export default function Home() {
           isLoading={isLoading} 
           statusMessage={statusMessage} 
         />
+
+        {markdownText && <TodoList markdownText={markdownText} />}
+        
+        {currentUrl && <HistoryPanel url={currentUrl} refreshTrigger={refreshTrigger} />}
       </main>
     </div>
   );
