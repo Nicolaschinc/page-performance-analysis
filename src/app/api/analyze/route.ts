@@ -23,10 +23,10 @@ export async function POST(req: NextRequest) {
     });
 
     // Fetch PageSpeed API
-    // Using mobile strategy as required
+    const apiKey = process.env.GOOGLE_API_KEY;
     const pageSpeedUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(
       url
-    )}&strategy=mobile`;
+    )}&strategy=mobile&category=performance${apiKey ? `&key=${apiKey}` : ''}`;
     
     const psRes = await fetch(pageSpeedUrl);
     const psData = await psRes.json();
@@ -45,6 +45,26 @@ export async function POST(req: NextRequest) {
     const fcp = parseFloat(lighthouseResult?.audits?.['first-contentful-paint']?.numericValue || '0');
     const tbt = parseFloat(lighthouseResult?.audits?.['total-blocking-time']?.numericValue || '0');
 
+    // Extract opportunities / failed audits
+    const audits = lighthouseResult?.audits || {};
+    const failedAudits = Object.values(audits)
+      .filter((audit: any) => {
+        if (audit.score === null || audit.score === undefined) return false;
+        if (audit.score >= 0.9) return false;
+        if (audit.scoreDisplayMode === 'notApplicable' || audit.scoreDisplayMode === 'informative') return false;
+        return true;
+      })
+      .map((audit: any) => ({
+        title: audit.title,
+        description: audit.description,
+        displayValue: audit.displayValue || '',
+      }))
+      .slice(0, 15);
+
+    const auditText = failedAudits.length > 0 
+      ? failedAudits.map((a: any) => `- ${a.title} ${a.displayValue ? `(${a.displayValue})` : ''}: ${a.description}`).join('\n')
+      : 'No major performance issues found.';
+
     // Prepare the prompt
     const prompt = `You are a performance optimization expert. Based on the following Google PageSpeed mobile metrics for ${url}:
 - Score: ${score}/100
@@ -53,7 +73,14 @@ export async function POST(req: NextRequest) {
 - First Contentful Paint (FCP): ${fcp.toFixed(2)} ms
 - Total Blocking Time (TBT): ${tbt.toFixed(2)} ms
 
-Generate a Prioritized Todo List (in markdown format with checkboxes, e.g., - [ ]) to improve these specific performance metrics. Focus on actionable, concrete steps. Keep it concise but helpful.`;
+Here are the specific performance issues and opportunities identified by Lighthouse:
+${auditText}
+
+Generate a Prioritized Todo List (in markdown format with checkboxes, e.g., - [ ]) to improve these specific performance metrics. Focus on actionable, concrete steps based ONLY on the identified issues above. Do not hallucinate generic advice that isn't related to the issues found. Keep it concise but helpful.`;
+
+    console.log("=== PROMPT TO LLM ===");
+    console.log(prompt);
+    console.log("=====================");
 
     // OpenAI streaming call
     const stream = await openai.chat.completions.create({
