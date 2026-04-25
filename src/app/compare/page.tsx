@@ -177,7 +177,7 @@ export default function ComparePage() {
   return (
     <CodexShell active="compare">
       <main className="min-h-[calc(100vh-4rem)] bg-[#f7f7f4] px-3 py-4 sm:px-6 sm:py-6">
-        <div className="mx-auto flex w-full max-w-[900px] flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-[1050px] flex-col gap-4">
           <section className="flex items-start gap-3">
             <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#202123] text-white sm:flex">
               <Bot className="h-4 w-4" strokeWidth={1.8} />
@@ -197,97 +197,101 @@ export default function ComparePage() {
             </div>
           </section>
 
-          <form onSubmit={handleSubmit} className="rounded-lg border border-black/10 bg-white shadow-sm">
-            <div className="grid gap-px bg-black/[0.06] md:grid-cols-2">
-              <label className="grid gap-2 bg-white p-4">
-                <span className="inline-flex items-center gap-2 text-[13px] font-medium text-[#6b6f76]">
-                  <Link2 className="h-3.5 w-3.5" strokeWidth={1.8} />
-                  链接 A
-                </span>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://example.com 或 http://10.0.0.12"
-                  value={leftUrl}
-                  onChange={(event) => setLeftUrl(event.target.value)}
-                  disabled={isLoading}
-                  className="h-11 w-full border-0 bg-transparent text-[15px] text-[#202123] outline-none placeholder:text-[#b8b8b8] disabled:cursor-not-allowed disabled:text-[#8e8ea0]"
-                />
-              </label>
-              <label className="grid gap-2 bg-white p-4">
-                <span className="inline-flex items-center gap-2 text-[13px] font-medium text-[#6b6f76]">
-                  <Link2 className="h-3.5 w-3.5" strokeWidth={1.8} />
-                  链接 B
-                </span>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://example.org 或 http://localhost:3000"
-                  value={rightUrl}
-                  onChange={(event) => setRightUrl(event.target.value)}
-                  disabled={isLoading}
-                  className="h-11 w-full border-0 bg-transparent text-[15px] text-[#202123] outline-none placeholder:text-[#b8b8b8] disabled:cursor-not-allowed disabled:text-[#8e8ea0]"
-                />
-              </label>
-            </div>
+          <div className="flex w-full justify-center">
+            <form onSubmit={handleSubmit} className="w-full max-w-[760px] overflow-hidden rounded-[20px] border border-black/[0.08] bg-white shadow-[0_10px_26px_rgba(0,0,0,0.06)]">
+              <div className="grid gap-px bg-black/[0.06]">
+                <label className="flex flex-col bg-white">
+                  <div className="flex items-center gap-2 border-b border-black/[0.06] bg-[#f4f4f4] px-4 py-2 text-[13px] font-medium text-[#6b6f76]">
+                    <Link2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    链接 A
+                  </div>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://example.com 或 http://10.0.0.12"
+                    value={leftUrl}
+                    onChange={(event) => setLeftUrl(event.target.value)}
+                    disabled={isLoading}
+                    className="h-16 w-full border-0 bg-white px-4 text-[13px] text-[#202123] outline-none placeholder:text-[13px] placeholder:text-[#a5a7ab] disabled:cursor-not-allowed disabled:text-[#9aa0a6] sm:h-[68px] sm:px-5 sm:text-[14px] sm:placeholder:text-[14px]"
+                  />
+                </label>
+                <label className="flex flex-col bg-white">
+                  <div className="flex items-center gap-2 border-b border-black/[0.06] bg-[#f4f4f4] px-4 py-2 text-[13px] font-medium text-[#6b6f76]">
+                    <Link2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+                    链接 B
+                  </div>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://example.org 或 http://localhost:3000"
+                    value={rightUrl}
+                    onChange={(event) => setRightUrl(event.target.value)}
+                    disabled={isLoading}
+                    className="h-16 w-full border-0 bg-white px-4 text-[13px] text-[#202123] outline-none placeholder:text-[13px] placeholder:text-[#a5a7ab] disabled:cursor-not-allowed disabled:text-[#9aa0a6] sm:h-[68px] sm:px-5 sm:text-[14px] sm:placeholder:text-[14px]"
+                  />
+                </label>
+              </div>
 
-            <div className="flex flex-col gap-3 border-t border-black/[0.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="grid h-9 grid-cols-2 rounded-full bg-[#f0f0f0] p-0.5">
-                  {(['mobile', 'desktop'] as const).map((item) => {
-                    const Icon = item === 'mobile' ? Smartphone : Monitor;
-                    return (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/[0.06] bg-[#f4f4f4] px-3 py-2.5 sm:px-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="grid h-8 grid-cols-2 rounded-full bg-black/[0.06] p-0.5 text-[12px] font-medium text-[#7a7d82] sm:text-[13px]">
+                    {(['mobile', 'desktop'] as const).map((item) => {
+                      const Icon = item === 'mobile' ? Smartphone : Monitor;
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setStrategy(item)}
+                          disabled={isLoading}
+                          className={`inline-flex min-w-[80px] items-center justify-center gap-1.5 rounded-full px-2.5 transition ${
+                            strategy === item ? 'bg-white text-[#202123] shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'hover:text-[#202123]'
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
+                          {strategyLabel(item)}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="hidden sm:flex items-center gap-2">
+                    {examples.map((example) => (
                       <button
-                        key={item}
+                        key={example.label}
                         type="button"
-                        onClick={() => setStrategy(item)}
+                        onClick={() => applyExample(example.left, example.right)}
                         disabled={isLoading}
-                        className={`inline-flex min-w-[88px] items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition ${
-                          strategy === item ? 'bg-white text-[#202123] shadow-sm' : 'text-[#6b6f76] hover:text-[#202123]'
-                        }`}
+                        className="rounded-full border border-black/10 px-3 py-1 text-[12px] text-[#5f6368] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
-                        {strategyLabel(item)}
+                        {example.label}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
 
-                {examples.map((example) => (
+                <div className="flex items-center gap-2">
+                  {isLoading && (
+                    <button
+                      type="button"
+                      onClick={cancelCompare}
+                      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-black/10 px-3 text-[13px] font-medium text-[#5f6368] hover:bg-white transition"
+                    >
+                      <X className="h-3.5 w-3.5" strokeWidth={1.8} />
+                      取消
+                    </button>
+                  )}
                   <button
-                    key={example.label}
-                    type="button"
-                    onClick={() => applyExample(example.left, example.right)}
-                    disabled={isLoading}
-                    className="rounded-full border border-black/10 px-3 py-1.5 text-[13px] text-[#5f6368] transition hover:bg-[#f7f7f4] disabled:cursor-not-allowed disabled:opacity-60"
+                    type="submit"
+                    disabled={!canSubmit}
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#202123] text-white shadow-[0_1px_6px_rgba(0,0,0,0.22)] transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#b9bdc3]"
+                    aria-label={isLoading ? '分析中' : '发送'}
                   >
-                    {example.label}
+                    <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2} />
                   </button>
-                ))}
+                </div>
               </div>
-
-              <div className="flex items-center justify-end gap-2">
-                {isLoading && (
-                  <button
-                    type="button"
-                    onClick={cancelCompare}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-black/10 px-4 text-[14px] font-medium text-[#5f6368] hover:bg-[#f7f7f4]"
-                  >
-                    <X className="h-4 w-4" strokeWidth={1.8} />
-                    取消
-                  </button>
-                )}
-                <button
-                  type="submit"
-                  disabled={!canSubmit}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#202123] px-4 text-[14px] font-medium text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#d8d8d8]"
-                >
-                  <ArrowUp className="h-4 w-4" strokeWidth={1.9} />
-                  {isLoading ? '分析中' : '发送'}
-                </button>
-              </div>
-            </div>
-          </form>
+            </form>
+          </div>
 
           {isLoading && (
             <section className="flex items-start gap-3">
