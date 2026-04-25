@@ -5,7 +5,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -14,13 +13,21 @@ datasource db {
 }
 
 model Run {
-  id        String   @id @default(uuid())
-  url       String
-  createdAt DateTime @default(now())
-  lcp       Float?
-  cls       Float?
-  fcp       Float?
-  tbt       Float?
-  score     Float?
-  todoList  String?
+  id            String   @id @default(cuid())
+  url           String
+  finalUrl      String?
+  pageTitle     String?
+  strategy      String   @default("mobile")
+  createdAt     DateTime @default(now())
+  score         Int?
+  lcp           Float?
+  cls           Float?
+  fcp           Float?
+  tbt           Float?
+  speedIndex    Float?
+  interactive   Float?
+  opportunities String?
+  diagnostics   String?
+
+  @@index([url, strategy, createdAt])
 }
