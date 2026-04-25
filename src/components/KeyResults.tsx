@@ -1,4 +1,4 @@
-import { Clock3, Gauge, LayoutDashboard, TimerReset } from 'lucide-react';
+import { Clock3, Gauge, TimerReset } from 'lucide-react';
 import type { ComponentType } from 'react';
 import type { ActionItem, AuditItem, MetricKey, MetricSnapshot } from '@/lib/pagespeed';
 import { metricRating } from '@/lib/pagespeed';
@@ -16,9 +16,15 @@ type IconProps = {
 
 const keyMetrics: { key: MetricKey; label: string; unit: string; helper: string; Icon: ComponentType<IconProps> }[] = [
   { key: 'score', label: 'Performance', unit: '', helper: 'Lighthouse 综合评分', Icon: Gauge },
+  { key: 'fcp', label: 'FCP', unit: 's', helper: '首次内容绘制耗时', Icon: Clock3 },
   { key: 'lcp', label: 'LCP', unit: 's', helper: '最大内容绘制耗时', Icon: Clock3 },
-  { key: 'cls', label: 'CLS', unit: '', helper: '页面视觉稳定性', Icon: LayoutDashboard },
-  { key: 'tbt', label: 'TBT', unit: 'ms', helper: '主线程阻塞时间', Icon: TimerReset },
+  { key: 'speedIndex', label: 'Speed Index', unit: 's', helper: '页面整体渲染速度', Icon: TimerReset },
+];
+
+const secondaryMetrics: { key: MetricKey; label: string; unit: string }[] = [
+  { key: 'cls', label: 'CLS', unit: '' },
+  { key: 'tbt', label: 'TBT', unit: 'ms' },
+  { key: 'interactive', label: 'Interactive', unit: 's' },
 ];
 
 function formatMetric(key: MetricKey, value: number | null, unit: string): string {
@@ -80,6 +86,24 @@ export default function KeyResults({ actions, metrics, opportunities }: KeyResul
               </p>
               <p className="mt-2 text-[13px] text-[#8a8a86]">{helper}</p>
             </article>
+          );
+        })}
+      </section>
+
+      <section className="flex flex-wrap gap-2">
+        {secondaryMetrics.map(({ key, label, unit }) => {
+          const rating = metricRating(key, metrics[key]);
+          return (
+            <span
+              key={key}
+              className="inline-flex items-center gap-2 rounded-full bg-black/[0.03] px-3 py-1.5 text-[13px] text-[#202123]"
+            >
+              <span className="text-[#666662]">{label}</span>
+              <span className="font-medium">{formatMetric(key, metrics[key], unit)}</span>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${statusClass(rating)}`}>
+                {statusText(rating)}
+              </span>
+            </span>
           );
         })}
       </section>

@@ -5,9 +5,11 @@ import {
   Bot,
   CheckCircle2,
   GitCompare,
+  Globe2,
   Link2,
   LoaderCircle,
   Monitor,
+  Server,
   Smartphone,
   Sparkles,
   X,
@@ -15,7 +17,7 @@ import {
 import { useRef, useState } from 'react';
 import CodexShell from '@/components/CodexShell';
 import PerformanceCompareChart from '@/components/PerformanceCompareChart';
-import type { MetricKey, MetricSnapshot, PageSpeedSummary, Strategy } from '@/lib/pagespeed';
+import type { AnalyzeMode, MetricKey, MetricSnapshot, PageSpeedSummary, Strategy } from '@/lib/pagespeed';
 
 type AnalyzeResponse = {
   durationMs?: number;
@@ -43,25 +45,16 @@ const compareMetrics: CompareMetric[] = [
   { key: 'speedIndex', label: 'Speed Index', unit: 's', higherIsBetter: false },
 ];
 
-const examples = [
-  {
-    label: '当前应用',
-    left: 'http://localhost:3000/',
-    right: 'http://localhost:3000/compare',
-  },
-  {
-    label: '公开页面',
-    left: 'https://example.com',
-    right: 'https://example.org',
-  },
-];
-
 function strategyLabel(strategy: Strategy): string {
   return strategy === 'desktop' ? '桌面端' : '移动端';
 }
 
 function sourceLabel(source: PageSpeedSummary['source']): string {
   return source === 'local-lighthouse' ? '本地 Lighthouse' : 'Google PSI';
+}
+
+function modeLabel(mode: AnalyzeMode): string {
+  return mode === 'internal' ? '内网' : '外网';
 }
 
 function displayUrl(summary: PageSpeedSummary): string {
@@ -110,11 +103,17 @@ function scoreSummary(result: CompareResult): string {
   return `${winner} 的 Lighthouse Score 高 ${Math.abs(leftScore - rightScore)} 分。`;
 }
 
-async function analyzeUrl(label: string, url: string, strategy: Strategy, signal: AbortSignal): Promise<AnalyzeResponse> {
+async function analyzeUrl(
+  label: string,
+  url: string,
+  mode: AnalyzeMode,
+  strategy: Strategy,
+  signal: AbortSignal,
+): Promise<AnalyzeResponse> {
   const response = await fetch('/api/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, strategy }),
+    body: JSON.stringify({ mode, url, strategy }),
     signal,
   });
   const data = await response.json();
@@ -125,6 +124,7 @@ async function analyzeUrl(label: string, url: string, strategy: Strategy, signal
 export default function ComparePage() {
   const [leftUrl, setLeftUrl] = useState('');
   const [rightUrl, setRightUrl] = useState('');
+  const [mode, setMode] = useState<AnalyzeMode>('external');
   const [strategy, setStrategy] = useState<Strategy>('mobile');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -143,8 +143,8 @@ export default function ComparePage() {
 
     try {
       const [left, right] = await Promise.all([
-        analyzeUrl('链接 A', leftUrl.trim(), strategy, controller.signal),
-        analyzeUrl('链接 B', rightUrl.trim(), strategy, controller.signal),
+        analyzeUrl('链接 A', leftUrl.trim(), mode, strategy, controller.signal),
+        analyzeUrl('链接 B', rightUrl.trim(), mode, strategy, controller.signal),
       ]);
       setResult({ left, right });
     } catch (caught) {
@@ -164,12 +164,6 @@ export default function ComparePage() {
     abortRef.current?.abort();
   }
 
-  function applyExample(left: string, right: string) {
-    setLeftUrl(left);
-    setRightUrl(right);
-    setError('');
-  }
-
   const canSubmit = leftUrl.trim().length > 0 && rightUrl.trim().length > 0 && !isLoading;
   const leftLabel = result ? shortUrl(displayUrl(result.left.summary)) : '链接 A';
   const rightLabel = result ? shortUrl(displayUrl(result.right.summary)) : '链接 B';
@@ -178,7 +172,7 @@ export default function ComparePage() {
     <CodexShell active="compare">
       <main className="min-h-[calc(100vh-4rem)] bg-[#f7f7f4] px-3 py-4 sm:px-6 sm:py-6">
         <div className="mx-auto flex w-full max-w-[1050px] flex-col gap-4">
-          <section className="flex items-start gap-3">
+          <section className="mx-auto flex w-full max-w-[760px] items-start gap-3">
             <div className="mt-1 hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#202123] text-white sm:flex">
               <Bot className="h-4 w-4" strokeWidth={1.8} />
             </div>
@@ -188,7 +182,7 @@ export default function ComparePage() {
                 性能对比
               </div>
               <p className="mt-2">
-                发给我两个 URL，我会用同一个 {strategyLabel(strategy)} 环境并行跑 Lighthouse，然后把差异整理成图表和可读结论。
+                发给我两个 URL，我会用同一个 {modeLabel(mode)} {strategyLabel(strategy)} 环境并行跑 Lighthouse，然后把差异整理成图表和可读结论。
               </p>
               <div className="mt-3 flex flex-wrap gap-2 text-[12px] text-[#6b6f76]">
                 <span className="rounded-full bg-[#f0f0f0] px-2.5 py-1">公网使用 Google PSI</span>
@@ -235,6 +229,36 @@ export default function ComparePage() {
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/[0.06] bg-[#f4f4f4] px-3 py-2.5 sm:px-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="grid h-8 grid-cols-2 rounded-full bg-black/[0.06] p-0.5 text-[12px] font-medium text-[#7a7d82] sm:text-[13px]">
+                    <button
+                      type="button"
+                      onClick={() => setMode('external')}
+                      disabled={isLoading}
+                      aria-pressed={mode === 'external'}
+                      className={`inline-flex min-w-[78px] items-center justify-center gap-1.5 rounded-full px-2.5 transition ${
+                        mode === 'external'
+                          ? 'bg-white text-[#202123] shadow-[0_1px_3px_rgba(0,0,0,0.14)]'
+                          : 'hover:text-[#202123]'
+                      }`}
+                    >
+                      <Globe2 className="h-3.5 w-3.5" strokeWidth={1.8} />
+                      外网
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode('internal')}
+                      disabled={isLoading}
+                      aria-pressed={mode === 'internal'}
+                      className={`inline-flex min-w-[78px] items-center justify-center gap-1.5 rounded-full px-2.5 transition ${
+                        mode === 'internal'
+                          ? 'bg-white text-[#202123] shadow-[0_1px_3px_rgba(0,0,0,0.14)]'
+                          : 'hover:text-[#202123]'
+                      }`}
+                    >
+                      <Server className="h-3.5 w-3.5" strokeWidth={1.8} />
+                      内网
+                    </button>
+                  </div>
+                  <div className="grid h-8 grid-cols-2 rounded-full bg-black/[0.06] p-0.5 text-[12px] font-medium text-[#7a7d82] sm:text-[13px]">
                     {(['mobile', 'desktop'] as const).map((item) => {
                       const Icon = item === 'mobile' ? Smartphone : Monitor;
                       return (
@@ -244,7 +268,9 @@ export default function ComparePage() {
                           onClick={() => setStrategy(item)}
                           disabled={isLoading}
                           className={`inline-flex min-w-[80px] items-center justify-center gap-1.5 rounded-full px-2.5 transition ${
-                            strategy === item ? 'bg-white text-[#202123] shadow-[0_1px_3px_rgba(0,0,0,0.14)]' : 'hover:text-[#202123]'
+                            strategy === item
+                              ? 'bg-white text-[#202123] shadow-[0_1px_3px_rgba(0,0,0,0.14)]'
+                              : 'hover:text-[#202123]'
                           }`}
                         >
                           <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
@@ -252,20 +278,6 @@ export default function ComparePage() {
                         </button>
                       );
                     })}
-                  </div>
-
-                  <div className="hidden sm:flex items-center gap-2">
-                    {examples.map((example) => (
-                      <button
-                        key={example.label}
-                        type="button"
-                        onClick={() => applyExample(example.left, example.right)}
-                        disabled={isLoading}
-                        className="rounded-full border border-black/10 px-3 py-1 text-[12px] text-[#5f6368] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {example.label}
-                      </button>
-                    ))}
                   </div>
                 </div>
 
@@ -328,7 +340,7 @@ export default function ComparePage() {
                   <div className="font-medium text-[#202123]">对比完成</div>
                   <p className="mt-1">{scoreSummary(result)}</p>
                   <p className="mt-1 text-[13px] text-[#6b6f76]">
-                    {leftLabel} vs {rightLabel} · {strategyLabel(result.left.summary.strategy)} ·{' '}
+                    {leftLabel} vs {rightLabel} · {modeLabel(mode)} · {strategyLabel(result.left.summary.strategy)} ·{' '}
                     {sourceLabel(result.left.summary.source)} / {sourceLabel(result.right.summary.source)}
                   </p>
                 </div>
