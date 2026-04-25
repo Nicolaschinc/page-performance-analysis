@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 性能优化工具 - 界面原型对比</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-gray-800 mb-4">🤖 AI 辅助性能优化工具 - 交互原型</h1>
+            <p class="text-gray-600">既然核心诉求是“让你更好地使用 AI 辅助优化”，这里准备了三种不同的工作流/交互界面方案。</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Option A -->
+            <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-shadow border-2 border-transparent hover:border-blue-500">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-xl font-bold text-gray-800">方案 A：左右分栏工作台</h2>
+                    <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-bold">推荐</span>
+                </div>
+                <p class="text-gray-600 text-sm mb-6 h-20">左侧展示 PageSpeed 的结构化数据（LCP/CLS 等和诊断列表），右侧为 AI 助手。点击左侧任意指标，右侧 AI 会立即针对该项提供代码级修复方案，支持多轮追问。</p>
+                
+                <div class="border border-gray-200 rounded-lg bg-gray-50 flex h-64 overflow-hidden">
+                    <div class="w-1/2 border-r border-gray-200 p-3 flex flex-col gap-2">
+                        <div class="text-xs font-bold text-gray-500 mb-1">指标看板</div>
+                        <div class="bg-red-50 border border-red-100 rounded p-2 text-red-700 text-xs font-medium cursor-pointer ring-2 ring-blue-400">
+                            LCP: 4.2s (需优化)
+                        </div>
+                        <div class="bg-yellow-50 border border-yellow-100 rounded p-2 text-yellow-700 text-xs font-medium cursor-pointer hover:bg-yellow-100">
+                            CLS: 0.25 (需优化)
+                        </div>
+                        <div class="bg-white border border-gray-200 rounded p-2 mt-2 text-[10px] text-gray-600 flex-1">
+                            诊断：消除阻塞渲染的资源...
+                        </div>
+                    </div>
+                    <div class="w-1/2 flex flex-col bg-white">
+                        <div class="text-xs font-bold text-gray-500 p-2 border-b border-gray-100">AI 助手</div>
+                        <div class="flex-1 p-2 overflow-y-auto bg-gray-50">
+                            <div class="bg-white border border-gray-100 rounded p-2 mb-2 shadow-sm text-[10px] text-gray-700">
+                                <strong>针对 LCP 4.2s 的建议：</strong><br>
+                                我分析了 JSON，发现首屏 Hero 图片加载过慢。建议在 head 中添加预加载：<br>
+                                <code class="bg-gray-100 px-1 mt-1 block text-blue-600">&lt;link rel="preload" as="image"...&gt;</code>
+                            </div>
+                        </div>
+                        <div class="p-2 border-t border-gray-100">
+                            <div class="h-6 bg-gray-100 rounded-full border border-gray-200 text-[10px] text-gray-400 px-2 flex items-center">询问 AI 更多细节...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Option B -->
+            <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-shadow border-2 border-transparent hover:border-purple-500">
+                <h2 class="text-xl font-bold text-gray-800 mb-3">方案 B：报告流 + 内联 AI</h2>
+                <p class="text-gray-600 text-sm mb-6 h-20">类似 Notion 风格的沉浸式报告。工具将 JSON 解析为按优先级排序的问题流，每个问题下方都有一个“✨ 让 AI 修复”按钮，点击后在原地展开代码 diff。</p>
+                
+                <div class="border border-gray-200 rounded-lg bg-gray-50 p-3 h-64 overflow-y-auto flex flex-col gap-3">
+                    <div class="bg-white p-3 border border-gray-200 rounded-lg shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="font-bold text-sm text-red-600">阻塞渲染的脚本</div>
+                            <span class="text-[10px] text-gray-400">节省 1.2s</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mb-2">app.bundle.js 阻塞了首屏绘制。</p>
+                        <button class="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] px-3 py-1 rounded-md font-medium flex items-center gap-1">
+                            ✨ 让 AI 生成修复代码
+                        </button>
+                        <div class="mt-2 bg-gray-900 text-green-400 text-[10px] p-2 rounded font-mono">
+                            - &lt;script src="app.js"&gt;&lt;/script&gt;<br>
+                            + &lt;script src="app.js" defer&gt;&lt;/script&gt;
+                        </div>
+                    </div>
+                    <div class="bg-white p-3 border border-gray-200 rounded-lg shadow-sm">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="font-bold text-sm text-yellow-600">图片未适当调整大小</div>
+                            <span class="text-[10px] text-gray-400">节省 0.8s</span>
+                        </div>
+                        <button class="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] px-3 py-1 rounded-md font-medium flex items-center gap-1">
+                            ✨ 让 AI 生成修复代码
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Option C -->
+            <div class="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-shadow border-2 border-transparent hover:border-green-500">
+                <h2 class="text-xl font-bold text-gray-800 mb-3">方案 C：AI 驱动的行动清单</h2>
+                <p class="text-gray-600 text-sm mb-6 h-20">淡化繁杂的指标数据，AI 后台消化完 Google API 的 JSON 后，直接输出一份“傻瓜式”的 Todo List。适合追求极简和执行力的开发者。</p>
+                
+                <div class="border border-gray-200 rounded-lg bg-gray-50 p-3 h-64 overflow-y-auto">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded font-bold">优先级 P0</span>
+                            <span class="text-xs font-bold text-gray-700">关键渲染路径优化</span>
+                        </div>
+                        <div class="flex items-start gap-2 bg-white p-2 border border-gray-200 rounded shadow-sm mb-2">
+                            <input type="checkbox" class="mt-1">
+                            <div>
+                                <div class="text-[11px] font-medium text-gray-800">提取关键 CSS 到 head 中</div>
+                                <div class="text-[9px] text-gray-500 mt-1">AI: 我发现 main.css 导致了 FCP 延迟... <a>查看代码</a></div>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-2 bg-white p-2 border border-gray-200 rounded shadow-sm">
+                            <input type="checkbox" class="mt-1">
+                            <div>
+                                <div class="text-[11px] font-medium text-gray-800">字体加载策略调整 (font-display)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
