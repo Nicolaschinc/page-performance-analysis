@@ -1,5 +1,9 @@
 export type Strategy = 'mobile' | 'desktop';
 
+export type AnalyzeMode = 'external' | 'internal';
+
+export type AnalysisSource = 'psi' | 'local-lighthouse';
+
 export type MetricKey = 'score' | 'lcp' | 'cls' | 'fcp' | 'tbt' | 'speedIndex' | 'interactive';
 
 export type MetricSnapshot = {
@@ -35,6 +39,7 @@ export type PageSpeedSummary = {
   finalUrl: string | null;
   pageTitle: string | null;
   strategy: Strategy;
+  source: AnalysisSource;
   fetchedAt: string;
   metrics: MetricSnapshot;
   opportunities: AuditItem[];
@@ -53,10 +58,11 @@ type LighthouseAudit = {
   details?: {
     overallSavingsMs?: number;
     overallSavingsBytes?: number;
+    [key: string]: unknown;
   };
 };
 
-type PageSpeedResponse = {
+export type PageSpeedResponse = {
   id?: string;
   lighthouseResult?: {
     finalDisplayedUrl?: string;
@@ -208,10 +214,57 @@ export function normalizeUrl(input: string): string {
   return parsed.toString();
 }
 
+function normalizeHostname(hostname: string): string {
+  return hostname.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
+}
+
+function isPrivateIpv4(hostname: string): boolean {
+  const parts = hostname.split('.');
+  if (parts.length !== 4) return false;
+  const octets = parts.map((part) => Number(part));
+  if (octets.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [first, second] = octets;
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168)
+  );
+}
+
+function isPrivateIpv6(hostname: string): boolean {
+  if (hostname === '::1' || hostname === '0:0:0:0:0:0:0:1') return true;
+  const firstGroup = Number.parseInt(hostname.split(':')[0] || '0', 16);
+  if (!Number.isFinite(firstGroup)) return false;
+  return (firstGroup & 0xfe00) === 0xfc00 || (firstGroup & 0xffc0) === 0xfe80;
+}
+
+export function isLocalNetworkUrl(url: string): boolean {
+  const { hostname } = new URL(url);
+  const normalized = normalizeHostname(hostname);
+
+  if (
+    normalized === 'localhost' ||
+    normalized === '0.0.0.0' ||
+    normalized.endsWith('.localhost') ||
+    normalized.endsWith('.local')
+  ) {
+    return true;
+  }
+
+  if (isPrivateIpv4(normalized) || isPrivateIpv6(normalized)) return true;
+
+  return !normalized.includes('.') && !normalized.includes(':');
+}
+
 export function parsePageSpeedResponse(
   data: PageSpeedResponse,
   url: string,
   strategy: Strategy,
+  source: AnalysisSource = 'psi',
 ): PageSpeedSummary {
   const result = data.lighthouseResult;
   const audits = result?.audits ?? {};
@@ -233,6 +286,7 @@ export function parsePageSpeedResponse(
     finalUrl: result?.finalDisplayedUrl ?? result?.requestedUrl ?? data.id ?? null,
     pageTitle: audits['document-title']?.displayValue ?? null,
     strategy,
+    source,
     fetchedAt: result?.fetchTime ?? new Date().toISOString(),
     metrics,
     opportunities,

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { normalizeUrl, parsePageSpeedResponse, type Strategy } from '@/lib/pagespeed';
+import { runLocalLighthouse } from '@/lib/local-lighthouse';
+import {
+  normalizeUrl,
+  parsePageSpeedResponse,
+  type AnalyzeMode,
+  type AnalysisSource,
+  type Strategy,
+} from '@/lib/pagespeed';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,15 +28,12 @@ function isStrategy(value: unknown): value is Strategy {
   return value === 'mobile' || value === 'desktop';
 }
 
-function isPublicHttpUrl(url: string): boolean {
-  const host = new URL(url).hostname.toLowerCase();
-  return !(
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '0.0.0.0' ||
-    host === '::1' ||
-    host.endsWith('.local')
-  );
+function isAnalyzeMode(value: unknown): value is AnalyzeMode {
+  return value === 'external' || value === 'internal';
+}
+
+function sourceForMode(mode: AnalyzeMode): AnalysisSource {
+  return mode === 'internal' ? 'local-lighthouse' : 'psi';
 }
 
 function isRetryablePageSpeedError(message: string): boolean {
@@ -76,41 +80,49 @@ async function fetchPageSpeedJson(pageSpeedUrl: URL, strategy: Strategy) {
   throw new Error(`${lastMessage}${hint}__STATUS__${lastStatus}`);
 }
 
+async function analyzeWithPageSpeed(url: string, strategy: Strategy) {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  const pageSpeedUrl = new URL('https://www.googleapis.com/pagespeedonline/v5/runPagespeed');
+  pageSpeedUrl.searchParams.set('url', url);
+  pageSpeedUrl.searchParams.set('strategy', strategy);
+  pageSpeedUrl.searchParams.append('category', 'performance');
+  pageSpeedUrl.searchParams.set('locale', 'zh-CN');
+  if (apiKey) pageSpeedUrl.searchParams.set('key', apiKey);
+
+  return fetchPageSpeedJson(pageSpeedUrl, strategy);
+}
+
+async function analyzeUrl(url: string, strategy: Strategy, source: AnalysisSource) {
+  if (source === 'local-lighthouse') {
+    return runLocalLighthouse(url, strategy);
+  }
+
+  return analyzeWithPageSpeed(url, strategy);
+}
+
 export async function POST(req: NextRequest) {
   const startedAt = Date.now();
 
   try {
-    const body = (await req.json()) as { url?: string; strategy?: unknown };
+    const body = (await req.json()) as { mode?: unknown; url?: string; strategy?: unknown };
 
     if (!body.url) {
       return NextResponse.json({ error: '请输入 URL。' }, { status: 400 });
     }
 
     const url = normalizeUrl(body.url);
-    if (!isPublicHttpUrl(url)) {
-      return NextResponse.json(
-        { error: 'PageSpeed Insights 只能分析公网可访问的 http/https URL。' },
-        { status: 400 },
-      );
-    }
-
     const strategy: Strategy = isStrategy(body.strategy) ? body.strategy : 'mobile';
-    const apiKey = process.env.GOOGLE_API_KEY;
-    const pageSpeedUrl = new URL('https://www.googleapis.com/pagespeedonline/v5/runPagespeed');
-    pageSpeedUrl.searchParams.set('url', url);
-    pageSpeedUrl.searchParams.set('strategy', strategy);
-    pageSpeedUrl.searchParams.append('category', 'performance');
-    pageSpeedUrl.searchParams.set('locale', 'zh-CN');
-    if (apiKey) pageSpeedUrl.searchParams.set('key', apiKey);
+    const mode: AnalyzeMode = isAnalyzeMode(body.mode) ? body.mode : 'external';
+    const source = sourceForMode(mode);
 
     const previousRun = await prisma.run.findFirst({
       where: { url, strategy },
       orderBy: { createdAt: 'desc' },
     });
 
-    const psData = await fetchPageSpeedJson(pageSpeedUrl, strategy);
+    const psData = await analyzeUrl(url, strategy, source);
 
-    const summary = parsePageSpeedResponse(psData, url, strategy);
+    const summary = parsePageSpeedResponse(psData, url, strategy, source);
 
     const run = await prisma.run.create({
       data: {
