@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 export const runtime = 'nodejs';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY || 'dummy',
 });
 
 export async function POST(req: NextRequest) {
@@ -131,8 +131,9 @@ Generate a Prioritized Todo List (in markdown format with checkboxes, e.g., - [ 
         'Connection': 'keep-alive',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('API Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

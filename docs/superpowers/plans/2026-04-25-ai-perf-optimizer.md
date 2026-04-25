@@ -55,21 +55,21 @@ git commit -m "chore: initialize Next.js app and Prisma SQLite schema"
 **Files:**
 - Create: `src/app/api/analyze/route.ts`
 
-- [ ] **Step 1: Create the Analyze API Route Skeleton**
+- [x] **Step 1: Create the Analyze API Route Skeleton**
 Create `src/app/api/analyze/route.ts` and set up the POST handler to receive `{ url }`.
 
-- [ ] **Step 2: Implement Google PageSpeed API fetch**
+- [x] **Step 2: Implement Google PageSpeed API fetch**
 Add logic to call `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url={url}&strategy=mobile`.
 Extract `lighthouseResult.categories.performance.score`, `lighthouseResult.audits['largest-contentful-paint'].displayValue`, etc.
 
-- [ ] **Step 3: Implement OpenAI streaming call**
+- [x] **Step 3: Implement OpenAI streaming call**
 Integrate `openai` SDK. Create a system prompt asking for a Prioritized Todo List based on the parsed PageSpeed metrics. Stream the response.
 
-- [ ] **Step 4: Database Persistence**
+- [x] **Step 4: Database Persistence**
 At the end of the stream, save the `url`, metrics, and the full `todoList` text into the Prisma database using `prisma.run.create`. Also, query the previous run for this URL to return the diff to the frontend via custom headers or a separate wrapper.
 *Note: Since it's a stream, sending the diff requires sending JSON first, then streaming text. Use a custom format or Server-Sent Events with distinct event types.*
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 ```bash
 git add src/app/api/analyze/route.ts
 git commit -m "feat: backend API for PageSpeed analysis and LLM streaming"
