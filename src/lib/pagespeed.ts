@@ -41,6 +41,9 @@ export type PageSpeedSummary = {
   strategy: Strategy;
   source: AnalysisSource;
   fetchedAt: string;
+  sampleCount: number;
+  requestedSampleCount: number;
+  failedSampleCount: number;
   metrics: MetricSnapshot;
   opportunities: AuditItem[];
   diagnostics: AuditItem[];
@@ -85,6 +88,8 @@ const metricAudits = {
   speedIndex: 'speed-index',
   interactive: 'interactive',
 } as const;
+
+const metricKeys: MetricKey[] = ['score', 'lcp', 'cls', 'fcp', 'tbt', 'speedIndex', 'interactive'];
 
 const auditToMetric: Record<string, string> = {
   'largest-contentful-paint': 'LCP',
@@ -288,10 +293,49 @@ export function parsePageSpeedResponse(
     strategy,
     source,
     fetchedAt: result?.fetchTime ?? new Date().toISOString(),
+    sampleCount: 1,
+    requestedSampleCount: 1,
+    failedSampleCount: 0,
     metrics,
     opportunities,
     diagnostics,
     actions: buildActions(metrics, [...opportunities, ...diagnostics]),
+  };
+}
+
+function averageMetric(summaries: PageSpeedSummary[], key: MetricKey): number | null {
+  const values = summaries
+    .map((summary) => summary.metrics[key])
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+
+  if (values.length === 0) return null;
+
+  const average = values.reduce((total, value) => total + value, 0) / values.length;
+  return key === 'score' ? Math.round(average) : average;
+}
+
+export function averagePageSpeedSummaries(
+  summaries: PageSpeedSummary[],
+  requestedSampleCount: number,
+): PageSpeedSummary {
+  if (summaries.length === 0) {
+    throw new Error('没有可用于平均的分析结果。');
+  }
+
+  const base = summaries[0];
+  const metrics = Object.fromEntries(
+    metricKeys.map((key) => [key, averageMetric(summaries, key)]),
+  ) as MetricSnapshot;
+  const audits = [...base.opportunities, ...base.diagnostics];
+
+  return {
+    ...base,
+    fetchedAt: new Date().toISOString(),
+    sampleCount: summaries.length,
+    requestedSampleCount,
+    failedSampleCount: Math.max(requestedSampleCount - summaries.length, 0),
+    metrics,
+    actions: buildActions(metrics, audits),
   };
 }
 

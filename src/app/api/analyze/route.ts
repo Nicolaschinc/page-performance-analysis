@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { runLocalLighthouse } from '@/lib/local-lighthouse';
 import {
+  averagePageSpeedSummaries,
   normalizeUrl,
   parsePageSpeedResponse,
   type AnalyzeMode,
   type AnalysisSource,
+  type PageSpeedSummary,
   type Strategy,
 } from '@/lib/pagespeed';
 
@@ -23,6 +25,7 @@ const RETRYABLE_PAGESPEED_ERRORS = [
   'ERRORED_DOCUMENT_REQUEST',
   'INTERNAL',
 ];
+const ANALYSIS_SAMPLE_COUNT = 3;
 
 function isStrategy(value: unknown): value is Strategy {
   return value === 'mobile' || value === 'desktop';
@@ -40,42 +43,24 @@ function isRetryablePageSpeedError(message: string): boolean {
   return RETRYABLE_PAGESPEED_ERRORS.some((pattern) => message.includes(pattern));
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 async function fetchPageSpeedJson(pageSpeedUrl: URL, strategy: Strategy) {
-  const maxAttempts = strategy === 'desktop' ? 2 : 1;
-  let lastMessage = '';
-  let lastStatus = 502;
+  const controller = new AbortController();
+  const timeoutMs = PAGESPEED_TIMEOUT_MS[strategy];
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const response = await fetch(pageSpeedUrl, {
+    cache: 'no-store',
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeout));
+  const data = await response.json();
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const controller = new AbortController();
-    const timeoutMs = PAGESPEED_TIMEOUT_MS[strategy];
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    const response = await fetch(pageSpeedUrl, {
-      cache: 'no-store',
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeout));
-    const data = await response.json();
-
-    if (response.ok && !data.error) {
-      return data;
-    }
-
-    lastStatus = response.status || 502;
-    lastMessage = data.error?.message ?? `PageSpeed 请求失败，状态码 ${response.status}。`;
-
-    if (attempt < maxAttempts && isRetryablePageSpeedError(lastMessage)) {
-      await sleep(2_000);
-      continue;
-    }
-
-    break;
+  if (response.ok && !data.error) {
+    return data;
   }
 
+  const lastStatus = response.status || 502;
+  const lastMessage = data.error?.message ?? `PageSpeed 请求失败，状态码 ${response.status}。`;
   const hint = isRetryablePageSpeedError(lastMessage)
-    ? ' Google Lighthouse 上游执行失败。桌面端模式更容易遇到这个问题，通常重试可以恢复。'
+    ? ' Google Lighthouse 上游执行失败。本次会使用其他成功样本求平均。'
     : '';
   throw new Error(`${lastMessage}${hint}__STATUS__${lastStatus}`);
 }
@@ -100,6 +85,42 @@ async function analyzeUrl(url: string, strategy: Strategy, source: AnalysisSourc
   return analyzeWithPageSpeed(url, strategy);
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message.split('__STATUS__')[0];
+  return '未知错误';
+}
+
+function statusFromError(error: unknown): number {
+  if (!(error instanceof Error)) return 502;
+  const [, statusMarker] = error.message.split('__STATUS__');
+  return Number(statusMarker) || 502;
+}
+
+async function analyzeUrlAverage(url: string, strategy: Strategy, source: AnalysisSource): Promise<PageSpeedSummary> {
+  const settled = await Promise.allSettled(
+    Array.from({ length: ANALYSIS_SAMPLE_COUNT }, async () => {
+      const data = await analyzeUrl(url, strategy, source);
+      return parsePageSpeedResponse(data, url, strategy, source);
+    }),
+  );
+  const summaries = settled
+    .filter((result): result is PromiseFulfilledResult<PageSpeedSummary> => result.status === 'fulfilled')
+    .map((result) => result.value);
+
+  if (summaries.length > 0) {
+    return averagePageSpeedSummaries(summaries, ANALYSIS_SAMPLE_COUNT);
+  }
+
+  const firstFailure = settled.find((result): result is PromiseRejectedResult => result.status === 'rejected');
+  if (firstFailure?.reason instanceof DOMException && firstFailure.reason.name === 'AbortError') {
+    throw firstFailure.reason;
+  }
+
+  const message = firstFailure ? errorMessage(firstFailure.reason) : '分析失败。';
+  const status = firstFailure ? statusFromError(firstFailure.reason) : 502;
+  throw new Error(`3 次分析请求都失败了：${message}__STATUS__${status}`);
+}
+
 export async function POST(req: NextRequest) {
   const startedAt = Date.now();
 
@@ -120,9 +141,7 @@ export async function POST(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    const psData = await analyzeUrl(url, strategy, source);
-
-    const summary = parsePageSpeedResponse(psData, url, strategy, source);
+    const summary = await analyzeUrlAverage(url, strategy, source);
 
     const run = await prisma.run.create({
       data: {

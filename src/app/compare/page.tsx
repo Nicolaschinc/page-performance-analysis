@@ -53,6 +53,12 @@ function sourceLabel(source: PageSpeedSummary['source']): string {
   return source === 'local-lighthouse' ? '本地 Lighthouse' : 'Google PSI';
 }
 
+function sampleLabel(summary: PageSpeedSummary): string {
+  if (summary.requestedSampleCount <= 1) return '单次样本';
+  if (summary.failedSampleCount === 0) return `${summary.sampleCount} 次平均`;
+  return `${summary.sampleCount}/${summary.requestedSampleCount} 次成功样本平均`;
+}
+
 function modeLabel(mode: AnalyzeMode): string {
   return mode === 'internal' ? '内网' : '外网';
 }
@@ -341,7 +347,8 @@ export default function ComparePage() {
                   <p className="mt-1">{scoreSummary(result)}</p>
                   <p className="mt-1 text-[13px] text-[#6b6f76]">
                     {leftLabel} vs {rightLabel} · {modeLabel(mode)} · {strategyLabel(result.left.summary.strategy)} ·{' '}
-                    {sourceLabel(result.left.summary.source)} / {sourceLabel(result.right.summary.source)}
+                    {sourceLabel(result.left.summary.source)} / {sourceLabel(result.right.summary.source)} ·{' '}
+                    {sampleLabel(result.left.summary)} / {sampleLabel(result.right.summary)}
                   </p>
                 </div>
               </div>
@@ -365,7 +372,8 @@ export default function ComparePage() {
                   <div className="text-[13px] text-[#6b6f76]">本次环境</div>
                   <div className="mt-2 text-[20px] font-semibold text-[#202123]">{strategyLabel(strategy)}</div>
                   <p className="mt-2 text-[13px] text-[#6b6f76]">
-                    {sourceLabel(result.left.summary.source)} / {sourceLabel(result.right.summary.source)}
+                    {sourceLabel(result.left.summary.source)} / {sourceLabel(result.right.summary.source)} ·{' '}
+                    {sampleLabel(result.left.summary)} / {sampleLabel(result.right.summary)}
                   </p>
                 </article>
               </div>

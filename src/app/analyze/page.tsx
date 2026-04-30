@@ -36,6 +36,12 @@ function sourceLabel(source: PageSpeedSummary['source']): string {
   return source === 'local-lighthouse' ? 'Chrome MCP' : 'Google PSI';
 }
 
+function sampleLabel(summary: PageSpeedSummary): string {
+  if (summary.requestedSampleCount <= 1) return '单次样本';
+  if (summary.failedSampleCount === 0) return `${summary.sampleCount} 次平均`;
+  return `${summary.sampleCount}/${summary.requestedSampleCount} 次成功样本平均`;
+}
+
 function modeLabel(mode: AnalyzeMode): string {
   return mode === 'internal' ? '内网' : '外网';
 }
@@ -227,6 +233,7 @@ function AnalyzePageContent() {
                     </div>
                     <p className="mt-1 text-[13px] capitalize text-[#6f7378]">
                       {strategyLabel(result.summary.strategy)} · {sourceLabel(result.summary.source)} ·{' '}
+                      {sampleLabel(result.summary)} ·{' '}
                       {new Date(result.summary.fetchedAt).toLocaleString('zh-CN')}
                       {typeof result.durationMs === 'number' && ` · ${(result.durationMs / 1000).toFixed(1)}s`}
                     </p>

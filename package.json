@@ -1,12 +1,37 @@
 {
-  "name": "temp-app",
+  "name": "page-performance-analysis",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "description": "A local-first performance analysis workspace that turns PageSpeed and Lighthouse runs into history, comparisons, and actionable recommendations.",
+  "author": "Nicolas Chinc",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nicolaschinc/page-performance-analysis.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Nicolaschinc/page-performance-analysis/issues"
+  },
+  "homepage": "https://github.com/Nicolaschinc/page-performance-analysis#readme",
+  "keywords": [
+    "pagespeed",
+    "lighthouse",
+    "nextjs",
+    "performance",
+    "web-vitals",
+    "prisma",
+    "sqlite"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "setup": "prisma generate && prisma db push",
+    "check": "npm run lint && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
