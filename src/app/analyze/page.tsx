@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import AiBriefPanel from '@/components/AiBriefPanel';
 import CodexShell from '@/components/CodexShell';
 import KeyResults from '@/components/KeyResults';
 import type { AnalyzeMode, MetricSnapshot, PageSpeedSummary, Strategy } from '@/lib/pagespeed';
@@ -252,6 +253,7 @@ function AnalyzePageContent() {
                 opportunities={result.summary.opportunities}
                 metrics={result.summary.metrics}
               />
+              <AiBriefPanel summary={result.summary} previous={result.previous} />
             </section>
           ) : null}
         </div>
