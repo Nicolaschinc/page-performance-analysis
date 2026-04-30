@@ -25,6 +25,7 @@ One-line positioning:
 - Triple parallel sampling: each URL is analyzed 3 times in parallel, and successful samples are averaged
 - Metric summary for Score, LCP, CLS, FCP, TBT, Speed Index, and Interactive
 - Action-oriented recommendations derived from Lighthouse audits
+- AI optimization briefs: compress Lighthouse results, history diffs, and optimization strategy into context packages for Codex, Cursor, Claude Code, ChatGPT, GitHub Issue, or Markdown, with a local fallback when no key is configured
 - Local history tracking with SQLite for trend review and previous-run comparison
 - Request cancellation without saving incomplete snapshots
 
@@ -84,10 +85,26 @@ The current required variables are listed in `.env.example`:
 ```bash
 DATABASE_URL="file:./dev.db"
 GOOGLE_API_KEY=""
+AI_PROVIDER="deepseek"
+DEEPSEEK_API_KEY=""
+DEEPSEEK_MODEL="deepseek-v4-pro"
+DEEPSEEK_BASE_URL="https://api.deepseek.com"
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-4o-mini"
+OPENAI_BASE_URL="https://api.openai.com/v1"
 ```
 
 - `DATABASE_URL`: SQLite database path, using a local file in the project root by default
 - `GOOGLE_API_KEY`: optional, but strongly recommended for more stable quota behavior
+- `AI_PROVIDER`: optional, `deepseek` or `openai`, defaulting to `openai`
+- `DEEPSEEK_API_KEY`: DeepSeek API key, used first when `AI_PROVIDER="deepseek"`
+- `DEEPSEEK_MODEL`: DeepSeek model, defaulting to `deepseek-v4-pro`
+- `DEEPSEEK_BASE_URL`: DeepSeek OpenAI-compatible API base URL, defaulting to `https://api.deepseek.com`
+- `OPENAI_API_KEY`: OpenAI API key when `AI_PROVIDER="openai"`; also supported as a compatibility fallback in DeepSeek mode
+- `OPENAI_MODEL`: OpenAI model, defaulting to `gpt-4o-mini`
+- `OPENAI_BASE_URL`: OpenAI API base URL, defaulting to `https://api.openai.com/v1`
+
+The configuration entry for AI features is the project-root `.env` file.
 
 ## Useful scripts
 

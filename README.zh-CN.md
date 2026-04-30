@@ -25,6 +25,7 @@ PageSpeed 和 Lighthouse 本身已经很强，但日常优化里常见的痛点�
 - 三次并行采样：同一 URL 并行发起 3 次分析，请求成功的样本自动求平均
 - 指标摘要：Score、LCP、CLS、FCP、TBT、Speed Index、Interactive
 - 行动建议：基于 Lighthouse audits 输出优先级更清晰的 action plan
+- AI 优化 Brief：将 Lighthouse 结果、历史对比和优化策略压缩成面向 Codex、Cursor、Claude Code、ChatGPT、GitHub Issue 或 Markdown 的上下文包；未配置 API Key 时返回本地规则兜底版
 - 历史追踪：每次运行存入本地 SQLite，支持趋势查看与最近一次对比
 - 分析取消：分析过程中可以取消，不会保存未完成快照
 
@@ -84,10 +85,26 @@ http://localhost:3000
 ```bash
 DATABASE_URL="file:./dev.db"
 GOOGLE_API_KEY=""
+AI_PROVIDER="deepseek"
+DEEPSEEK_API_KEY=""
+DEEPSEEK_MODEL="deepseek-v4-pro"
+DEEPSEEK_BASE_URL="https://api.deepseek.com"
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-4o-mini"
+OPENAI_BASE_URL="https://api.openai.com/v1"
 ```
 
 - `DATABASE_URL`：SQLite 数据库文件路径，默认使用项目根目录下的本地数据库文件
 - `GOOGLE_API_KEY`：可选，但强烈建议配置。未配置时依然可运行，只是更容易遇到限流或配额不稳定
+- `AI_PROVIDER`：可选，`deepseek` 或 `openai`，默认 `openai`
+- `DEEPSEEK_API_KEY`：DeepSeek API Key，`AI_PROVIDER="deepseek"` 时优先读取
+- `DEEPSEEK_MODEL`：DeepSeek 模型，默认 `deepseek-v4-pro`
+- `DEEPSEEK_BASE_URL`：DeepSeek OpenAI-compatible API 地址，默认 `https://api.deepseek.com`
+- `OPENAI_API_KEY`：OpenAI API Key，`AI_PROVIDER="openai"` 时使用；DeepSeek 模式下也可作为兼容兜底
+- `OPENAI_MODEL`：OpenAI 模型，默认 `gpt-4o-mini`
+- `OPENAI_BASE_URL`：OpenAI API 地址，默认 `https://api.openai.com/v1`
+
+AI 能力的配置入口就在项目根目录的 `.env` 文件里。
 
 ## 常用脚本
 
